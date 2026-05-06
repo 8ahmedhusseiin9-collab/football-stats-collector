@@ -32,7 +32,7 @@ print(df2.isnull().sum())
 #df1 cleaned
 
 df1.rename(columns={"team":"Winner Team"},inplace=True)
-df1_clean=df1.drop(columns=["minute"])
+df1_clean=df1.drop(columns=["minute"]).copy()
 df1_clean["Date"]=pd.to_datetime(df1_clean["date"])
 before1=len(df1_clean)
 df1_clean=df1_clean.drop_duplicates()
@@ -63,13 +63,18 @@ with open("data/api_response.json", "w", encoding="utf-8") as f:
 print("✅ API response saved!")
 #convert to dataframe
 Matches=data["matches"]
-df_api=pd.DataFrame(Matches)
+df_api_clean = pd.DataFrame({
+    'date': [m['utcDate'] for m in data['matches']],
+    'home_team': [m['homeTeam']['name'] for m in data['matches']],
+    'away_team': [m['awayTeam']['name'] for m in data['matches']],
+    'status': [m['status'] for m in data['matches']],
+})
 print("API Sample")
-print(df_api.head())
-print("\nShape_API:",df_api.shape)
+print(df_api_clean.head())
+print("\nShape_API:",df_api_clean.shape)
 
 #==== MERGE ====
-df_combined=pd.concat([df1_clean,df2_clean,df_api],ignore_index=True)
+df_combined=pd.concat([df1_clean,df2_clean,df_api_clean],ignore_index=True)
 print("\nCombined Shape:",df_combined.shape)
 print("\nCombined Sample:")
 print(df_combined.head())
@@ -77,3 +82,26 @@ print(df_combined.head())
 #saved data
 df_combined.to_csv("data/combined_data_football.csv",index=False)
 print("\nCombined file saved!")
+
+report = f"""
+================================
+   FOOTBALL STATUS REPORT
+================================
+--- CSV Source ---
+Original Shape1  : {df1.shape}
+Cleaned Shape1   : {df1_clean.shape}
+Date Range1      : {df1_clean['Date'].min()} → {df1_clean['Date'].max()}
+
+
+Original Shape2  : {df2.shape}
+Cleaned Shape2  : {df2_clean.shape}
+Date Range2      : {df2_clean['Date'].min()} → {df2_clean['Date'].max()}
+
+--- API Source ---
+Currencies      : {len(df_api_clean)} currency
+Date Fetched    : {df_api_clean['Date'].iloc[0]}
+
+--- Combined ---
+Final Shape     : {df_combined.shape}
+================================
+"""
